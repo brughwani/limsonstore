@@ -3027,7 +3027,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-<!-- END app block --><!-- BEGIN app block: shopify://apps/webengage/blocks/webengage-embed/1d458caf-1d70-4697-a570-55048d495614 --></head><body class=" gradient filter-loader"><div class="we-app-block"></div>
+<!-- END app block --><!-- BEGIN app block: shopify://apps/webengage/blocks/webengage-embed/1d458caf-1d70-4697-a570-55048d495614 -->
+<style>
+/* Fix dropdown visibility */
+details[open] > .header__submenu { 
+    display: block !important; 
+    visibility: visible !important; 
+    opacity: 1 !important;
+}
+details > summary { cursor: pointer; }
+</style>
+
+</head><body class=" gradient filter-loader"><div class="we-app-block"></div>
 <script type="text/javascript" id="we-variables-embedded">
 try {
     var _webengage_phone_library = "https://cdn.shopify.com/extensions/019bff17-045a-7a45-af47-389c9a1a3251/we-shopify-app-69/assets/webengagePhoneLibrary.js";
