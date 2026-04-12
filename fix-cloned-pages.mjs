@@ -16,22 +16,31 @@ function fixHtml(content, isPage = false) {
     let fixed = content;
 
     // 1. Fix broken CSS links (href="#")
-    // Fix: escaped slashes in regex
-    fixed = fixed.replace(/<link href="#" rel="stylesheet" type="text\/css" media="all" \/>/g, 
-        `<link href="${prefix}css/base.css" rel="stylesheet" type="text/css" media="all">`);
-    
-    // Also handle slightly different variations
-    fixed = fixed.replace(/<link href="#" rel="stylesheet" type="text\/css" media="all">/g, 
-        `<link href="${prefix}css/base.css" rel="stylesheet" type="text/css" media="all">`);
+    // Use a multi-link replacement to ensure major styles are loaded
+    const baseStyles = [
+        'base.css',
+        'component-card.css',
+        'header.css',
+        'footer.css',
+        'section-footer.css',
+        'template-collection.css'
+    ].map(css => `<link href="${prefix}css/${css}" rel="stylesheet" type="text/css" media="all">`).join('\n    ');
+
+    // Replace href="#" CSS links
+    fixed = fixed.replace(/<link href="#" rel="stylesheet" type="text\/css" media="all" \/>/g, baseStyles);
+    fixed = fixed.replace(/<link href="#" rel="stylesheet" type="text\/css" media="all">/g, baseStyles);
 
     // 2. Fix absolute script paths to the original domain
     fixed = fixed.replace(/src="\/\/www\.theindusvalley\.in\/cdn\/shop\/t\/166\/assets\/([^"?]+)(\?v=[^"]+)?"/g, 
         `src="${prefix}js/$1"`);
-    
     fixed = fixed.replace(/src="\/\/www\.theindusvalley\.in\/[^"]*\/assets\/([^"?]+)(\?v=[^"]+)?"/g, 
         `src="${prefix}js/$1"`);
 
-    // 3. Update internal links in the menubar and body
+    // 3. Fix CDN images that might be absolute
+    fixed = fixed.replace(/src="\/\/www\.theindusvalley\.in\/cdn\/shop\/files\/([^"?]+)(\?v=[^"]+)?"/g, 
+        `src="${prefix}images/$1"`);
+
+    // 4. Update internal links in the menubar and body
     for (const [originalUrl, localPath] of Object.entries(mapping)) {
         const escapedUrl = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const localHref = isPage ? (localPath.startsWith('pages/') ? localPath.replace('pages/', '') : '../' + localPath) : localPath;
@@ -43,25 +52,24 @@ function fixHtml(content, isPage = false) {
         }
     }
 
-    // 4. Fix common broken collections/products paths not in mapping
-    fixed = fixed.replace(/href="\/collections\/([^"]+)"/g, (match, slug) => {
-        const local = `collections-${slug}.html`;
-        const finalPath = isPage ? local : `pages/${local}`;
-        return `href="${finalPath}"`;
-    });
-
-    // 5. Fix header/footer references
+    // 5. Fix logo and home links
+    fixed = fixed.replace(/href="https:\/\/www\.theindusvalley\.in\/"/g, `href="${prefix}index.html"`);
+    fixed = fixed.replace(/href="https:\/\/www\.theindusvalley\.in"/g, `href="${prefix}index.html"`);
     fixed = fixed.replace(/src="images\/limson-logo\.png"/g, `src="${prefix}images/limson-logo.png"`);
-    
-    // 6. Fix dropdown unresponsiveness
+
+    // 6. Fix the JS SyntaxError (Redeclarations)
+    // Find 'let token = null;' and similar and remove 'let' if it appears more than once
+    // A simpler way: change all 'let' to 'var' for these specific variables to allow redeclaration
+    fixed = fixed.replace(/let token = null;/g, 'var token = null;');
+    fixed = fixed.replace(/let isDropdownVisible = false;/g, 'var isDropdownVisible = false;');
+    fixed = fixed.replace(/let isDropdownMobileVisible = false;/g, 'var isDropdownMobileVisible = false;');
+    fixed = fixed.replace(/let isElementsWithAccountClickable = true;/g, 'var isElementsWithAccountClickable = true;');
+
+    // 7. Fix dropdown unresponsiveness (ensure scripts and styles)
     if (!fixed.includes('details-disclosure.js') && fixed.includes('</head>')) {
         fixed = fixed.replace('</head>', `<script src="${prefix}js/details-disclosure.js" defer="defer"></script>\n</head>`);
     }
-    if (!fixed.includes('global.js') && fixed.includes('</head>')) {
-        fixed = fixed.replace('</head>', `<script src="${prefix}js/global.js" defer="defer"></script>\n</head>`);
-    }
-
-    // 7. Fix the specific issue where dropdowns don't open (style override)
+    
     if (!fixed.includes('/* Fix dropdown visibility */') && fixed.includes('</head>')) {
         const styleOverride = `
 <style>
@@ -104,4 +112,4 @@ if (fs.existsSync(PAGES_DIR)) {
     });
 }
 
-console.log('\nAll pages fixed successfully!');
+console.log('\nAll pages repaired successfully!');
